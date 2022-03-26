@@ -88,8 +88,11 @@ Physical interface: {{ name | _start_ }}, {{state.admin | lower}}, Physical link
 	  </group>
 	{{ _end_ }}
 	</group>
-	<group name="protocolList" expand="">
-    Protocol {{type | lower | _start_}}, MTU: {{mtu | macro('string2int')}}, {{ignore(".*")}}
+	{{ mtu | set(mtu) }}
+	<group name="protocolList*" expand="">
+    Protocol inet, MTU: {{mtu | macro('string2int') | record('mtu')}}, {{ignore(".*")}}
+    Protocol {{type | _start_}},{{ignore(".*")}}
+    
 	<group name="value.ipList*">
       Addresses, Flags: {{flagList | ORPHRASE | lower | split(" ") | to_list}}
         Destination: {{ net | macro("net2long")}}, Local: {{ ip | macro("ip2long")}}, Broadcast: {{ignore}}, Generation: {{ignore}}
