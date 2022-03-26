@@ -1,0 +1,100 @@
+<macro>
+import ipaddress
+
+def format_speed(data):
+	if 'kbps' in data:
+		return int(data.replace('kbps', '') + '000')
+	if 'mbps' in data:
+		return int(data.replace('mbps', '') + '000000')
+	if 'gbps' in data:
+		return int(data.replace('gbps', '') + '000000000')
+	
+def format_duplex(data):
+	if 'Full' in data:
+		return 'full'
+	if 'Half' in data:
+		return 'half'
+	
+def format_mac(data):
+	return '.'.join(data.replace(':','')[i:i+4] for i in range(0,12,4))
+
+def ip2long(data):
+	return data, {"broadLong": int(ipaddress.IPv4Address(data))}
+
+def net2long(data):
+	data_array = data.split("/")
+	return data, {"netLong": int(ipaddress.IPv4Address(data_array[0])), "mask":int(data_array[1])}
+
+def bits2bytes(data):
+	return int(data) / 8
+
+def string2int(data):
+	return int(data)
+</macro>
+
+<group expand="">
+Physical interface: {{ name | _start_ }}, {{state.admin | lower}}, Physical link is {{state.link | lower}}
+  Description: {{dscr}}
+  Link-level type: {{linkLevelType | lower }}, MTU: {{mtu | macro('string2int')}}, Link-mode: {{duplex | macro(format_duplex)}}, Speed: {{speed | macro(format_speed)}}, BPDU Error: {{ignore}}, MAC-REWRITE Error: {{ignore}}, Loopback: {{ignore}}, Source filtering: {{ignore}}, Flow control: {{ignore}},
+  Current address: {{mac | macro(format_mac)}}, Hardware address: {{ignore}}
+  Statistics last cleared: {{clearing | lower }}
+  <group name="statsList">
+    <group expand="">
+  {{type | lower | _start_ }} statistics:
+   Input  bytes  :            {{counters.inBytes | macro('string2int') }}                  {{load.inBytes | macro(bits2bytes)}} bps
+   Output bytes  :            {{counters.outBytes | macro('string2int') }}                 {{load.outBytes | macro(bits2bytes)}} bps
+   Input  packets:            {{counters.inPkts | macro('string2int') }}                    {{load.inPkts | macro('string2int')}} pps
+   Output packets:            {{counters.outPkts | macro('string2int')}}                    {{load.outPkts  | macro('string2int')}} pps
+	</group>
+  {{ _end_ }}
+	 <group  expand="">
+  {{type | lower | resub('input', 'inErrors') | resub('output', 'outErrors')| _start_}} errors:
+    Errors: {{counters.inErr | macro('string2int')}}, Drops: {{counters.inDrops | macro('string2int')}}, Framing errors: {{ignore}}, Runts: {{ignore}}, Policed discards: {{ignore}}, L3 incompletes: {{ignore}}, L2 channel errors: {{ignore}}, L2 mismatch timeouts: {{ignore}}, FIFO errors: {{ignore}}, Resource errors: {{ignore}}
+	</group>
+   {{ _end_ }}
+	 <group expand="">
+  {{type | lower | resub('input', 'inErrors') | resub('output', 'outErrors')| _start_}} errors:
+    Errors: {{counters.inErr | macro('string2int') }}, Drops: {{counters.inDrops | macro('string2int')}}, Framing errors: {{ignore}}, Runts: {{ignore}}, Giants: {{ignore}}, Policed discards: {{ignore}}, Resource errors: {{ignore}}
+	</group>
+   {{ _end_ }}
+	<group expand="">
+  {{type | lower | resub('input', 'inErrors') | resub('output', 'outErrors')| _start_}} errors:
+    Carrier transitions: {{ignore}}, Errors: {{counters.outErr | macro('string2int') }}, Drops: {{counters.outDrops | macro('string2int') }}, Collisions: {{ignore}}, Aged packets: {{ignore}}, FIFO errors: {{ignore}}, HS link CRC errors: {{ignore}}, MTU errors: {{ignore}}, Resource errors: {{ignore}}
+	</group>
+   {{ _end_ }}
+	<group expand="">
+  {{type | lower | resub('input', 'inErrors') | resub('output', 'outErrors')| _start_}} errors:
+    Carrier transitions: {{ignore}}, Errors: {{counters.outErr | macro('string2int') }}, Drops: {{counters.outDrops | macro('string2int') }}, MTU errors: {{ignore}}, Resource errors: {{ignore}} 
+	</group>
+   {{ _end_ }}
+  </group>
+  <group name="logIntList*">
+  Logical interface {{ name }} (Index {{ignore}}) (SNMP ifIndex {{ignore}}) (Generation {{ignore}})
+    Description: {{dscr}}
+    <group name="statsList">
+    Flags: SNMP-Traps {{ignore}} Encapsulation: {{ignore}}
+	   <group expand="">
+    {{type | exclude("Transit") | lower | _start_}} statistics:
+     Input  bytes  :             {{counters.inBytes | macro('string2int') }}             
+     Output bytes  :              {{counters.outBytes | macro('string2int') }}
+     Input  packets:              {{counters.inPkts | macro('string2int') }}
+     Output packets:              {{counters.outPkts | macro('string2int') }}
+	   </group>
+	{{ _end_ }}
+      <group expand="">
+    {{type | exclude("Link")| lower |_start_}}:
+        Input :       {{counters.inPkts | macro('string2int') }}          {{load.inPkts | macro('string2int') }}     {{counters.inBytes | macro('string2int') }}         {{load.inBytes | macro(bits2bytes)}}
+        Output:       {{counters.outPkts | macro('string2int') }}          {{load.outPkts | macro('string2int') }}     {{counters.outBytes | macro('string2int') }}          {{load.outBytes | macro(bits2bytes)}}	
+	  </group>
+	{{ _end_ }}
+	</group>
+	<group name="protocolList" expand="">
+    Protocol {{type | lower | _start_}}, MTU: {{mtu | macro('string2int')}}, {{ignore(".*")}}
+	<group name="value.ipList*">
+      Addresses, Flags: {{flagList | ORPHRASE | lower | split(" ") | to_list}}
+        Destination: {{ net | macro("net2long")}}, Local: {{ ip | macro("ip2long")}}, Broadcast: {{ignore}}, Generation: {{ignore}}
+	</group>
+	{{_end__}}
+	</group>
+  </group>
+</group>
