@@ -1,3 +1,4 @@
+from distutils.command.build_scripts import first_line_re
 import json
 import pathlib
 from urllib.parse import urlparse
@@ -12,6 +13,8 @@ import backoff
 from bs4 import BeautifulSoup
 import logging
 from urllib.parse import urljoin
+from download import DownloadThread
+
 logging.basicConfig(level=logging.INFO)
 
 
@@ -22,9 +25,10 @@ def no_retry_code(e):
 
 
 class urlExplorer():
-
+    download_q = Queue()
     downloaded_urls = []
     paths_taken = []
+    urls_to_download = []
     root_url = ''
     root_url_parsed = ''
 
@@ -49,18 +53,22 @@ class urlExplorer():
         except Exception as exc:
             print(exc, file=sys.stderr)
 
-    async def download(self, response, pagefilename='index'):
-        url = response.url
-        url_parsed = urlparse(url)
+    async def process_url(self, url, pagefilename='index'):
         tasks = []
-        soup = BeautifulSoup(response.text, "html.parser")
+        logging.info("processing: %s", url)
+        response = await self.request_with_retries(
+            url=url, method='GET')
+        if not response:
+            return True
+        self.extract(response)
+        url_parsed = urlparse(url)
+        soup = BeautifulSoup(response, "html.parser")
         pagefolder = url_parsed.netloc if url_parsed.path == '/' else url_parsed.netloc + url_parsed.path
         if pagefolder in self.paths_taken:
             logging.info("%s is already downloaded", pagefolder)
             return True
         else:
             self.paths_taken.append(pagefolder)
-
         # create folder if not exists
         pathlib.Path(pagefolder).mkdir(parents=True, exist_ok=True)
         for tag in soup.findAll(['script', 'img', 'style']):
@@ -68,7 +76,8 @@ class urlExplorer():
             try:
                 element = tag.get('data-breeze')
                 if not tag.get(inner).startswith('http'):
-                    logging.debug("Not a downloadable element: %s", element)
+                    logging.debug(
+                        "Not a downloadable element: %s", element)
                     continue
             except AttributeError:
                 logging.debug("Not a downloadable empty element:")
@@ -80,9 +89,20 @@ class urlExplorer():
         with open(os.path.join(pagefolder, pagefilename+'.html'), 'w') as file:
             file.write(soup.prettify())
 
+    async def download(self):
+        tasks = []
+        await self.process_url(self.download_q.get())
+        while not self.download_q.empty():
+            for _ in range(5):
+                url = self.download_q.get()
+                tasks.append(self.process_url(url))
+            await asyncio.gather(*tasks)
+            tasks = []
+
     def extract(self, response):
-        hrefs = []
-        soup = BeautifulSoup(response.text, "html.parser")
+        if not response:
+            return True
+        soup = BeautifulSoup(response, "html.parser")
         for link in soup.find_all('a'):
             href = link.get('href')
             if not href:
@@ -94,29 +114,14 @@ class urlExplorer():
             # Already crawled that url
             if href in self.downloaded_urls:
                 continue
-            if self.root_url_parsed.netloc == found_parsed_url.netloc and self.root_url_parsed.path != found_parsed_url.path and href not in hrefs:
-                hrefs.append(link.get('href'))
-        return hrefs
+            if self.root_url_parsed.netloc == found_parsed_url.netloc and self.root_url_parsed.path != found_parsed_url.path and href not in self.urls_to_download:
+                self.urls_to_download.append(href)
+                logging.info("adding %s to the q", href)
+                self.download_q.put(href)
 
-    def run(self, url=None):
-        if not url:
-            url = self.root_url
-        if url in self.downloaded_urls:
-            logging.info("%s is already downloaded", url)
-            return True
-        else:
-            self.downloaded_urls.append(url)
-        logging.info("processing: %s", url)
-        page_content = self.request_with_retries_sync(
-            url=url, method='GET')
-        if not page_content:
-            return True
-        asyncio.run(
-            self.download(response=page_content))
-        urls = self.extract(page_content)
-        for url in urls:
-            self.run(url=url)
-        return True
+    def run(self):
+        self.download_q.put(self.root_url)
+        asyncio.run(self.download())
 
     @backoff.on_exception(
         backoff.expo, (requests.exceptions.Timeout,
@@ -129,7 +134,7 @@ class urlExplorer():
             r.raise_for_status()
             return r
         except Exception as e:
-            logging.error("request_with_retries_sync: %s", json.dumps(e))
+            logging.error("request_with_retries_sync: %s", e)
 
     @backoff.on_exception(backoff.expo, (aiohttp.ClientError, asyncio.TimeoutError), max_tries=3, max_time=20, giveup=no_retry_code)
     async def request_with_retries(self, **kwargs):
@@ -138,7 +143,7 @@ class urlExplorer():
             async with aiohttp.request(timeout=timeout, raise_for_status=True, **kwargs) as response:
                 return await response.read()
         except Exception as e:
-            logging.error("request_with_retries: %s", json.dumps(e))
+            logging.error("request_with_retries: %s", e)
 
 
 if __name__ == '__main__':
