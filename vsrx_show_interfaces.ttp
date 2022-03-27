@@ -19,7 +19,8 @@ def format_mac(data):
 	return '.'.join(data.replace(':','')[i:i+4] for i in range(0,12,4))
 
 def ip2long(data):
-	return data, {"broadLong": int(ipaddress.IPv4Address(data))}
+	if data != 'Unspecified':
+		return data, {"broadLong": int(ipaddress.IPv4Address(data))}
 
 def net2long(data):
 	data_array = data.split("/")
@@ -97,7 +98,8 @@ Physical interface: {{ name | _start_ }}, {{state.admin | lower}}, Physical link
     Protocol {{type | _start_}},{{ignore(".*")}}
 	<group name="value.ipList*">
       Addresses, Flags: {{flagList | ORPHRASE | lower | split(" ") | to_list}}
-        Destination: {{ net | macro("net2long")}}, Local: {{ ip | macro("ip2long")}}, Broadcast: {{ignore}}, Generation: {{ignore}}
+        Destination: {{ net | macro("net2long")}}, Local: {{ ip | macro("ip2long")}}, Broadcast: Unspecified, Generation: {{ignore}}
+        Destination: {{ net  | macro("net2long")}}, Local: {{ ip }}, Broadcast: {{broadLong | macro("ip2long")}}, Generation: {{ignore}}
 	</group>
 	{{_end__}}
 	</group>
