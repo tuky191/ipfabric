@@ -15,5 +15,4 @@ if __name__ == '__main__':
         assert result == parsed_source
         pprint((parser.result(format='raw')).pop()[0], width=100)
     except AssertionError as e:
-        pprint(e)
         pprint(DeepDiff(result, parsed_source), width=100)
