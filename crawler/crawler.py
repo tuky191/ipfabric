@@ -1,3 +1,4 @@
+import json
 import pathlib
 from urllib.parse import urlparse
 from queue import Queue
@@ -14,6 +15,12 @@ from urllib.parse import urljoin
 logging.basicConfig(level=logging.INFO)
 
 
+def no_retry_code(e):
+    # dont retry request if 404 received
+    if isinstance(e, aiohttp.ClientResponseError):
+        return e.status == 404
+
+
 class urlExplorer():
 
     downloaded_urls = []
@@ -26,7 +33,7 @@ class urlExplorer():
         self.root_url_parsed = urlparse(url)
 
     async def soupSave(self, tag, pagefolder, url, inner='src'):
-        logging.info("Downloading: %s", tag.get(inner))
+        logging.debug("Downloading: %s", tag.get(inner))
         try:
             filename = os.path.basename(
                 tag[inner])
@@ -78,9 +85,14 @@ class urlExplorer():
         soup = BeautifulSoup(response.text, "html.parser")
         for link in soup.find_all('a'):
             href = link.get('href')
+            if not href:
+                continue
             found_parsed_url = urlparse(href)
             # We want only explore from the root url onwards
             if self.root_url not in href:
+                continue
+            # Already crawled that url
+            if href in self.downloaded_urls:
                 continue
             if self.root_url_parsed.netloc == found_parsed_url.netloc and self.root_url_parsed.path != found_parsed_url.path and href not in hrefs:
                 hrefs.append(link.get('href'))
@@ -94,43 +106,42 @@ class urlExplorer():
             return True
         else:
             self.downloaded_urls.append(url)
-
+        logging.info("processing: %s", url)
         page_content = self.request_with_retries_sync(
             url=url, method='GET')
+        if not page_content:
+            return True
         asyncio.run(
             self.download(response=page_content))
-
-        for url in self.extract(page_content):
+        urls = self.extract(page_content)
+        for url in urls:
             self.run(url=url)
+        return True
 
     @backoff.on_exception(
         backoff.expo, (requests.exceptions.Timeout,
                        requests.exceptions.ConnectionError,
                        requests.exceptions.RequestException,
-                       ), max_tries=3, max_time=10)
+                       ), max_tries=3, max_time=20, giveup=no_retry_code)
     def request_with_retries_sync(self, **kwargs):
         try:
             r = requests.request(**kwargs, timeout=30)
             r.raise_for_status()
             return r
         except Exception as e:
-            print(e)
-            raise(e)
+            logging.error("request_with_retries_sync: %s", json.dumps(e))
 
-    @backoff.on_exception(backoff.expo, (aiohttp.ClientError, asyncio.TimeoutError), max_tries=3, max_time=10)
+    @backoff.on_exception(backoff.expo, (aiohttp.ClientError, asyncio.TimeoutError), max_tries=3, max_time=20, giveup=no_retry_code)
     async def request_with_retries(self, **kwargs):
         try:
             timeout = aiohttp.ClientTimeout(total=10)
             async with aiohttp.request(timeout=timeout, raise_for_status=True, **kwargs) as response:
                 return await response.read()
         except Exception as e:
-            print('this did not work')
-            print(e)
-            raise(e)
+            logging.error("request_with_retries: %s", json.dumps(e))
 
 
 if __name__ == '__main__':
-
-    #    explorer = urlExplorer('https://ipfabric.io/')
-    explorer = urlExplorer(url='https://ipfabric.io/company/jobs/')
+    explorer = urlExplorer(
+        url='https://ipfabric.io/')
     explorer.run()
