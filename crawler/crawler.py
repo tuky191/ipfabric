@@ -38,7 +38,6 @@ class urlExplorer():
                 with open(filepath, 'wb') as file:
                     filebin = await self.request_with_retries(
                         url=fileurl, method='get')
-                    # pprint(filebin)
                     file.write(filebin)
         except Exception as exc:
             print(exc, file=sys.stderr)
