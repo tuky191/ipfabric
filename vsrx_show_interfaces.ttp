@@ -19,23 +19,27 @@ def format_mac(data):
 	return '.'.join(data.replace(':','')[i:i+4] for i in range(0,12,4))
 
 def ip2long(data):
-	return data, {"broadLong": int(ipaddress.IPv4Address(data))}
+	if data != 'Unspecified':
+		return data, {"broadLong": int(ipaddress.IPv4Address(data))}
 
 def net2long(data):
 	data_array = data.split("/")
 	return data, {"netLong": int(ipaddress.IPv4Address(data_array[0])), "mask":int(data_array[1])}
 
 def bits2bytes(data):
-	return int(data) / 8
+	return int(int(data) / 8)
 
 def string2int(data):
 	return int(data)
+
 </macro>
 
 <group expand="">
 Physical interface: {{ name | _start_ }}, {{state.admin | lower}}, Physical link is {{state.link | lower}}
   Description: {{dscr}}
-  Link-level type: {{linkLevelType | lower }}, MTU: {{mtu | macro('string2int')}}, Link-mode: {{duplex | macro(format_duplex)}}, Speed: {{speed | macro(format_speed)}}, BPDU Error: {{ignore}}, MAC-REWRITE Error: {{ignore}}, Loopback: {{ignore}}, Source filtering: {{ignore}}, Flow control: {{ignore}},
+  Link-level type: {{linkLevelType | lower }}, MTU: {{mtu | macro('string2int')}}, Link-mode: {{duplex | macro(format_duplex)}}, Speed: {{speed | macro(format_speed)}}, {{ignore(".*")}}
+  Link-level type: {{linkLevelType | lower }}, MTU: {{mtu | macro('string2int')}}, Speed: {{speed | lower | macro(format_speed)}}, {{ignore(".*")}}
+  
   Current address: {{mac | macro(format_mac)}}, Hardware address: {{ignore}}
   Statistics last cleared: {{clearing | lower }}
   <group name="statsList">
@@ -71,7 +75,7 @@ Physical interface: {{ name | _start_ }}, {{state.admin | lower}}, Physical link
   <group name="logIntList*">
   Logical interface {{ name }} (Index {{ignore}}) (SNMP ifIndex {{ignore}}) (Generation {{ignore}})
     Description: {{dscr}}
-    <group name="statsList">
+    <group name="statsList*">
     Flags: SNMP-Traps {{ignore}} Encapsulation: {{ignore}}
 	   <group expand="">
     {{type | exclude("Transit") | lower | _start_}} statistics:
@@ -88,13 +92,17 @@ Physical interface: {{ name | _start_ }}, {{state.admin | lower}}, Physical link
 	  </group>
 	{{ _end_ }}
 	</group>
-	<group name="protocolList" expand="">
-    Protocol {{type | lower | _start_}}, MTU: {{mtu | macro('string2int')}}, {{ignore(".*")}}
+	{{ mtu | set(mtu) }}
+	<group name="protocolList" expand="" record="mtu">
+    Protocol inet, MTU: {{mtu | macro('string2int') | record('mtu')}}, {{ignore(".*")}}
+    Protocol {{type | _start_}},{{ignore(".*")}}
 	<group name="value.ipList*">
-      Addresses, Flags: {{flagList | ORPHRASE | lower | split(" ") | to_list}}
-        Destination: {{ net | macro("net2long")}}, Local: {{ ip | macro("ip2long")}}, Broadcast: {{ignore}}, Generation: {{ignore}}
+      Addresses, Flags: {{flagList | ORPHRASE | lower | split(" ")}}
+        Destination: {{ net | macro("net2long")}}, Local: {{ ip | macro("ip2long")}}, Broadcast: Unspecified, Generation: {{ignore}}
+        Destination: {{ net  | macro("net2long")}}, Local: {{ ip }}, Broadcast: {{broadLong | macro("ip2long")}}, Generation: {{ignore}}
 	</group>
 	{{_end__}}
 	</group>
+
   </group>
 </group>
