@@ -77,7 +77,7 @@ Physical interface: {{ name | _start_ }}, {{state.admin | lower}}, Physical link
 	    </group>
 	  </group>
 	{{ mtu | set(mtu) }}
-	<group name="protocolList" expand="" record="mtu">
+	<group name="protocolList" expand="">
     Protocol inet, MTU: {{mtu | macro('string2int') | record('mtu')}}, {{ignore(".*")}}
     Protocol {{type | _start_}},{{ignore(".*")}}
 	  <group name="value.ipList*">
