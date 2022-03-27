@@ -27,7 +27,7 @@ def net2long(data):
 	return data, {"netLong": int(ipaddress.IPv4Address(data_array[0])), "mask":int(data_array[1])}
 
 def bits2bytes(data):
-	return int(data) / 8
+	return int(int(data) / 8)
 
 def string2int(data):
 	return int(data)
@@ -75,7 +75,7 @@ Physical interface: {{ name | _start_ }}, {{state.admin | lower}}, Physical link
   <group name="logIntList*">
   Logical interface {{ name }} (Index {{ignore}}) (SNMP ifIndex {{ignore}}) (Generation {{ignore}})
     Description: {{dscr}}
-    <group name="statsList">
+    <group name="statsList*">
     Flags: SNMP-Traps {{ignore}} Encapsulation: {{ignore}}
 	   <group expand="">
     {{type | exclude("Transit") | lower | _start_}} statistics:
@@ -97,7 +97,7 @@ Physical interface: {{ name | _start_ }}, {{state.admin | lower}}, Physical link
     Protocol inet, MTU: {{mtu | macro('string2int') | record('mtu')}}, {{ignore(".*")}}
     Protocol {{type | _start_}},{{ignore(".*")}}
 	<group name="value.ipList*">
-      Addresses, Flags: {{flagList | ORPHRASE | lower | split(" ") | to_list}}
+      Addresses, Flags: {{flagList | ORPHRASE | lower | split(" ")}}
         Destination: {{ net | macro("net2long")}}, Local: {{ ip | macro("ip2long")}}, Broadcast: Unspecified, Generation: {{ignore}}
         Destination: {{ net  | macro("net2long")}}, Local: {{ ip }}, Broadcast: {{broadLong | macro("ip2long")}}, Generation: {{ignore}}
 	</group>
