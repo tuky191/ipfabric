@@ -34,8 +34,8 @@ The crawling is limited to the root domain. It keeps tabs on which urls it has a
 
     Main limitation is that it currently does not have setting for max # of subdomains it should explore. Also simple q and async
     functions are used to speed things up, proper multi-threading solution with dedicated explore thread(s) filling the q, while
-    download thread(s) for consuming found urls. It does not check if given resource was already 
-    downloaded(e.g. same js file sourced in various sub-domains)
+    download thread(s) for consuming found urls. It does not check if given resource was already downloaded(e.g. same js file 
+    sourced in various sub-domains)
 
     To scale crawling on large grid i'd use separate workers running the exploration part, while feeding microservices 
     behind n number of api endpoints which would be processing the found urls.
