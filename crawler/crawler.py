@@ -16,10 +16,10 @@ from yaspin.spinners import Spinners
 import time
 
 logging.basicConfig(level=logging.CRITICAL)
-
-#hack to remove unwanted stderr
-f = open(os.devnull, 'w')
-sys.stderr = f
+if os.name == 'nt':
+    os.system('cls')
+elif os.name == 'posix':
+    os.system('clear')
 
 
 def no_retry_code(e):
@@ -51,7 +51,7 @@ class urlExplorer():
                                                               method='get')
                     file.write(filebin)
         except Exception as exc:
-            print(exc, file=sys.stderr)
+            logging.warning("soupSave: %s", exc)
 
     async def process_url(self, url, sp):
 
@@ -101,7 +101,8 @@ class urlExplorer():
 
     async def download(self):
         tasks = []
-        with yaspin(Spinners.noise, text="Processing!") as sp:
+
+        with yaspin(Spinners.dots8Bit, text="Exploring!") as sp:
             await self.process_url(self.download_q.get(), sp)
             while not self.download_q.empty():
                 logging.info('pending %s items', self.download_q.qsize())
