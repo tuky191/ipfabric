@@ -29,7 +29,7 @@ discovered URL)
 State your assumptions and limitations of your solution. Evaluate the weaknesses of this solution. Suggestions for future improvements of your crawler is a plus. How it might be scaled to run on a large grid of machines. (Maximum 1 page!)
 
 Discussion:
-Crawler takes the root (https://ipfabric.io/) and explores all urls within the specified domain(subdomain). It downloads files,images, js and css. 
+Crawler takes the root (https://ipfabric.io/) and explores all urls within the specified domain(subdomain). It downloads files, images and js. 
 The crawling is limited to the root domain. It keeps tabs on which urls it has already crawled and will not crawl same url twice.
 
     Main limitation is that it currently does not have setting for max # of subdomains it should explore. Also simple q and async
