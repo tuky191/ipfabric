@@ -1,6 +1,6 @@
 # ipfabric
 
-coding test for ipfabric
+Coding case-study for ipfabric interview.
 
 1.) Install python 3.7
 
