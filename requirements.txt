@@ -1,0 +1,9 @@
+aiohttp==3.8.1
+asyncio==3.4.3
+backoff==1.11.1
+beautifulsoup4==4.10.0
+bs4==0.0.1
+python-magic==0.4.25
+yaspin==2.1.0
+ttp==0.8.4
+deepdiff==5.7.0

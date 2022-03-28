@@ -21,6 +21,9 @@ if os.name == 'nt':
 elif os.name == 'posix':
     os.system('clear')
 
+if sys.version_info < (3, 7):
+    sys.exit('Sorry, need at least python 3.7 to run.')
+
 
 def no_retry_code(e):
     # dont retry request if 404 received
