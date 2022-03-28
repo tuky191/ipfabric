@@ -16,7 +16,9 @@ from yaspin.spinners import Spinners
 import time
 
 logging.basicConfig(level=logging.CRITICAL)
-f = open('/dev/null', 'w')
+
+#hack to remove unwanted stderr
+f = open(os.devnull, 'w')
 sys.stderr = f
 
 
@@ -71,9 +73,8 @@ class urlExplorer():
             folder_list.pop()
             pathlib.Path('/'.join(folder_list)).mkdir(parents=True,
                                                       exist_ok=True)
-            if response is None:
-                with open(filename, 'wb') as file:
-                    file.write(response)
+            with open(filename, 'wb') as file:
+                file.write(response)
             return True
 
         self.extract(response)
@@ -139,7 +140,9 @@ class urlExplorer():
         self.download_q.put(self.root_url)
         asyncio.run(self.download())
         end = time.time()
-        print(f'Explored #{len(self.queued_urls)} in {end - start}')
+        print(
+            f'Explored #{len(self.queued_urls)} paths in {int(end - start)} seconds'
+        )
 
     @backoff.on_exception(backoff.expo,
                           (aiohttp.ClientError, asyncio.TimeoutError),
