@@ -29,7 +29,7 @@ Crawler takes the root (https://ipfabric.io/) and explores all urls within the s
 
     Main limitation is that it currently does not have setting for max # of subdomains it should explore. Also simple q and async
     functions are used to speed things up, proper multi-threading solution with dedicated explore thread(s) filling the q, while
-    download thread(s) for consuming found urls.
+    download thread(s) for consuming found urls. It does not check if given resource was already downloaded(e.g. same js file sourced in various sub-domains)
 
     To scale crawling on large grid i'd use separate workers running the exploration part, while feeding microservices behind n number of api endpoints  which would be processing the found urls.
 
