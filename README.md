@@ -3,13 +3,17 @@
 coding test for ipfabric
 
 1.) Install python 3.7
-2.) Install requirements
-python3.7 -m pip install -r requirements.txt
-3.) To run
-Part1:
-cd crawler
-python3.7 crawler.py
 
+2.) Install requirements
+
+python3.7 -m pip install -r requirements.txt
+
+3.) To run
+
+    Part1:
+    cd crawler
+    python3.7 crawler.py
+    
     Part2:
     cd parser
     python3.7 parser.py
